@@ -82,7 +82,7 @@ export default function FeedbackDetailPage({ params }: { params: { id: string } 
         <div className="mt-8 border-t border-line pt-5">
           <p className="mb-3 text-sm font-semibold">Update status</p>
           <div className="flex flex-wrap gap-2">
-            {(["NEW", "REVIEWED", "RESOLVED"] as FeedbackStatus[]).map((status) => (
+            {(["NEW", "REVIEWED", "ACTIONED"] as FeedbackStatus[]).map((status) => (
               <button
                 key={status}
                 disabled={saving}

@@ -148,3 +148,100 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.workspaceId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const workspaceId = session.user.workspaceId;
+
+    const body = await request.json();
+
+    const text =
+      typeof body.text === "string"
+        ? body.text.trim()
+        : "";
+
+    const customerName =
+      typeof body.customerName === "string"
+        ? body.customerName.trim()
+        : "";
+
+    const customerEmail =
+      typeof body.customerEmail === "string"
+        ? body.customerEmail.trim()
+        : "";
+
+    const channel =
+      typeof body.channel === "string"
+        ? body.channel.trim().toUpperCase()
+        : "";
+
+    if (!text) {
+      return NextResponse.json(
+        { error: "Feedback text is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!channel) {
+      return NextResponse.json(
+        { error: "Feedback channel is required." },
+        { status: 400 }
+      );
+    }
+
+    const feedback = await prisma.feedback.create({
+      data: {
+        content: text,
+        customerLabel: customerName || null,
+        channel,
+        workspaceId,
+        status: "NEW",
+      },
+
+      include: {
+        feedbackThemes: {
+          include: {
+            theme: true,
+          },
+        },
+      },
+    });
+
+    const response = {
+      id: feedback.id,
+      workspaceId: feedback.workspaceId,
+      text: feedback.content,
+      customerName: feedback.customerLabel,
+      customerEmail: customerEmail || null,
+      channel: feedback.channel,
+      status: feedback.status,
+      sentiment: feedback.sentiment,
+      sentimentScore: feedback.sentimentScore,
+      score: feedback.sentimentScore,
+      featureArea: null,
+      themes: feedback.feedbackThemes.map((relation) => ({
+        id: relation.theme.id,
+        name: relation.theme.name,
+      })),
+      createdAt: feedback.createdAt.toISOString(),
+    };
+
+    return NextResponse.json(response, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/feedback error:", error);
+
+    return NextResponse.json(
+      { error: "Failed to create feedback" },
+      { status: 500 }
+    );
+  }
+}
