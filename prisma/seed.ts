@@ -9,13 +9,21 @@ import {
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not defined");
+}
+
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: databaseUrl,
 });
 
 const prisma = new PrismaClient({
   adapter,
 });
+
+const DEMO_PASSWORD = "Password123!";
 
 const channels = [
   "WEB",
@@ -203,17 +211,11 @@ async function main() {
    */
 
   await prisma.feedbackTheme.deleteMany();
-
   await prisma.embedding.deleteMany();
-
   await prisma.feedback.deleteMany();
-
   await prisma.report.deleteMany();
-
   await prisma.theme.deleteMany();
-
   await prisma.user.deleteMany();
-
   await prisma.workspace.deleteMany();
 
   /*
@@ -232,11 +234,22 @@ async function main() {
 
   /*
    * -------------------------------------------------------
-   * 3. Password
+   * 3. Create and verify demo password hash
    * -------------------------------------------------------
    */
 
-  const passwordHash = await bcrypt.hash("Password123!", 12);
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+
+  const passwordVerified = await bcrypt.compare(
+    DEMO_PASSWORD,
+    passwordHash
+  );
+
+  if (!passwordVerified) {
+    throw new Error("❌ Password hash verification failed");
+  }
+
+  console.log("✅ Demo password hash verified");
 
   /*
    * -------------------------------------------------------
@@ -325,7 +338,9 @@ async function main() {
     feedbackRecords.push(feedback);
   }
 
-  console.log(`✅ Created ${feedbackRecords.length} feedback records`);
+  console.log(
+    `✅ Created ${feedbackRecords.length} feedback records`
+  );
 
   /*
    * -------------------------------------------------------
@@ -419,9 +434,15 @@ async function main() {
   console.log("------------------------------------------");
 
   console.log("\nDemo login credentials:");
-  console.log("ADMIN   : admin@loop.demo / Password123!");
-  console.log("ANALYST : analyst@loop.demo / Password123!");
-  console.log("VIEWER  : viewer@loop.demo / Password123!");
+  console.log(
+    "ADMIN   : admin@loop.demo / Password123!"
+  );
+  console.log(
+    "ANALYST : analyst@loop.demo / Password123!"
+  );
+  console.log(
+    "VIEWER  : viewer@loop.demo / Password123!"
+  );
 }
 
 main()
