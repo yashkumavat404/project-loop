@@ -19,15 +19,46 @@ export default function AskPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+
     if (!question.trim()) return;
 
     setLoading(true);
+    setAnswer(null);
+
     try {
       const result = await api.askLoop(question.trim());
+
+      console.log("Ask LOOP API response:", result);
+
       setAnswer(result);
-    } catch {
+    } catch (error: unknown) {
+      console.error("Ask LOOP error:", error);
+
+      let message = "An unknown error occurred while processing the request.";
+
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (typeof error === "string") {
+        message = error;
+      } else if (error && typeof error === "object") {
+        try {
+          const errorObject = error as {
+            message?: unknown;
+            error?: unknown;
+          };
+
+          if (typeof errorObject.message === "string") {
+            message = errorObject.message;
+          } else if (typeof errorObject.error === "string") {
+            message = errorObject.error;
+          }
+        } catch {
+          // Keep the default error message
+        }
+      }
+
       setAnswer({
-        answer: "The Ask LOOP API is not connected yet. Once the backend is merged, this answer will be generated from retrieved workspace feedback and will include source items.",
+        answer: `Ask LOOP failed: ${message}`,
         sources: []
       });
     } finally {
@@ -45,17 +76,27 @@ export default function AskPage() {
       <section className="card p-5">
         <div className="flex items-start gap-3 rounded-xl bg-indigo-50 p-4">
           <Bot className="mt-0.5 text-indigo-700" size={20} />
+
           <div>
-            <p className="font-semibold text-indigo-950">Grounded answers only</p>
+            <p className="font-semibold text-indigo-950">
+              Grounded answers only
+            </p>
+
             <p className="mt-1 text-sm leading-6 text-indigo-900/80">
-              Answers should be generated only from feedback retrieved from your current workspace and should show the source feedback used.
+              Answers should be generated only from feedback retrieved from
+              your current workspace and should show the source feedback used.
             </p>
           </div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {suggestions.map((item) => (
-            <button key={item} className="btn-secondary text-xs" onClick={() => setQuestion(item)}>
+            <button
+              key={item}
+              type="button"
+              className="btn-secondary text-xs"
+              onClick={() => setQuestion(item)}
+            >
               {item}
             </button>
           ))}
@@ -67,9 +108,16 @@ export default function AskPage() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask about customer feedback..."
+            disabled={loading}
           />
-          <button className="btn-primary shrink-0" disabled={loading}>
+
+          <button
+            type="submit"
+            className="btn-primary shrink-0"
+            disabled={loading || !question.trim()}
+          >
             <Send size={16} className="mr-2" />
+
             {loading ? "Thinking..." : "Ask"}
           </button>
         </form>
@@ -78,21 +126,36 @@ export default function AskPage() {
       {answer && (
         <section className="card mt-6 p-6">
           <h2 className="font-semibold">LOOP answer</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{answer.answer}</p>
+
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+            {answer.answer}
+          </p>
 
           <div className="mt-7 border-t border-line pt-5">
             <h3 className="font-semibold">Sources</h3>
+
             {answer.sources.length ? (
               <div className="mt-3 space-y-3">
                 {answer.sources.map((source) => (
-                  <div key={source.id} className="rounded-lg border border-line p-4">
-                    <p className="text-sm leading-6 text-slate-700">{source.text}</p>
-                    <p className="mt-2 text-xs text-muted">{source.channel} · {new Date(source.createdAt).toLocaleDateString()}</p>
+                  <div
+                    key={source.id}
+                    className="rounded-lg border border-line p-4"
+                  >
+                    <p className="text-sm leading-6 text-slate-700">
+                      {source.text}
+                    </p>
+
+                    <p className="mt-2 text-xs text-muted">
+                      {source.channel} ·{" "}
+                      {new Date(source.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-sm text-muted">No source feedback returned.</p>
+              <p className="mt-2 text-sm text-muted">
+                No source feedback returned.
+              </p>
             )}
           </div>
         </section>
