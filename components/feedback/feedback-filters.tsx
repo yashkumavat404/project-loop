@@ -24,7 +24,7 @@ export function FeedbackFilters(props: FeedbackFiltersProps) {
         <option value="">All statuses</option>
         <option value="NEW">New</option>
         <option value="REVIEWED">Reviewed</option>
-        <option value="RESOLVED">Resolved</option>
+        <option value="ACTIONED">Actioned</option>
       </select>
       <select className="input" value={props.sentiment} onChange={(e) => props.onSentiment(e.target.value)}>
         <option value="">All sentiment</option>
