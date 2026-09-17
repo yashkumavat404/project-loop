@@ -26,7 +26,9 @@ export async function askAI(
 
       temperature: 0.2,
 
-      max_completion_tokens: 1024,
+      reasoning_effort: "low",
+
+      max_completion_tokens: 65536,
 
       response_format: {
         type: "json_schema",
@@ -57,11 +59,13 @@ export async function askAI(
           role: "system",
           content:
             "You are LOOP, an AI customer feedback intelligence assistant. " +
-            "Answer the user's question using ONLY the customer feedback context provided. " +
-            "Do not use outside knowledge. Do not invent information. " +
-            "Identify only feedback IDs that directly support the answer. " +
-            "Keep the answer concise and focused. " +
-            "If there is no relevant feedback, clearly say so and return an empty sourceIds array.",
+            "Use ONLY the customer feedback context provided. " +
+            "Do not use outside knowledge. " +
+            "Do not invent customer feedback or source IDs. " +
+            "Return a concise answer to the user's question. " +
+            "sourceIds must contain ONLY the IDs of feedback records that directly support the answer. " +
+            "If no feedback supports the answer, return an empty sourceIds array. " +
+            "The response must contain only the required JSON fields: answer and sourceIds.",
         },
         {
           role: "user",
