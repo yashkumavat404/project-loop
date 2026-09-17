@@ -76,10 +76,20 @@ export const api = {
     text: string;
     customerName?: string;
     customerEmail?: string;
+    customerLabel?: string;
+    createdAt?: string;
     channel: string;
   }) =>
     request<Feedback>("/api/feedback", {
       method: "POST",
       body: JSON.stringify(data)
+    }),
+
+  importFeedbackCsv: (
+    rows: Array<{ text: string; channel: string; customerLabel?: string; createdAt?: string }>
+  ) =>
+    request<{ imported: number; failed: number }>("/api/feedback/import", {
+      method: "POST",
+      body: JSON.stringify({ rows })
     })
 };

@@ -7,9 +7,9 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
   const [text, setText] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [channel, setChannel] = useState("WEB");
   const [customerLabel, setCustomerLabel] = useState("");
   const [createdAt, setCreatedAt] = useState("");
+  const [channel, setChannel] = useState("WEB");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -21,9 +21,9 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
       return;
     }
     if (!channel) {
-  setMessage("Channel is required.");
-  return;
-   }
+      setMessage("Channel is required.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -31,11 +31,15 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
         text: text.trim(),
         customerName: customerName.trim() || undefined,
         customerEmail: customerEmail.trim() || undefined,
-        channel
+        customerLabel: customerLabel.trim() || undefined,
+        channel,
+        createdAt: createdAt || undefined
       });
       setText("");
       setCustomerName("");
       setCustomerEmail("");
+      setCustomerLabel("");
+      setCreatedAt("");
       setMessage("Feedback added successfully.");
       onCreated?.();
     } catch (error) {
@@ -65,6 +69,22 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
         <div>
           <label className="mb-1 block text-sm font-medium">Customer email</label>
           <input className="input" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium">Customer Label</label>
+          <input className="input" value={customerLabel} onChange={(e) => setCustomerLabel(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Created At</label>
+          <input
+            className="input"
+            type="datetime-local"
+            value={createdAt}
+            onChange={(e) => setCreatedAt(e.target.value)}
+          />
         </div>
       </div>
 
