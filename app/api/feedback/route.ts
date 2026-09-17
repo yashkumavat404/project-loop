@@ -160,6 +160,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only ADMIN and ANALYST users can create feedback.
+    // VIEWER users are read-only.
+    if (
+      session.user.role !== "ADMIN" &&
+      session.user.role !== "ANALYST"
+    ) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
     const workspaceId = session.user.workspaceId;
 
     const body = await request.json();

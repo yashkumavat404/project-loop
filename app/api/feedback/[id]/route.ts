@@ -102,7 +102,8 @@ export async function GET(
 /**
  * PATCH /api/feedback/[id]
  *
- * Currently allows updating the feedback status.
+ * Only ADMIN and ANALYST users can update feedback status.
+ * VIEWER users are read-only.
  */
 export async function PATCH(
   request: NextRequest,
@@ -115,6 +116,18 @@ export async function PATCH(
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // Only ADMIN and ANALYST users can update feedback.
+    // VIEWER users are read-only.
+    if (
+      session.user.role !== "ADMIN" &&
+      session.user.role !== "ANALYST"
+    ) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
       );
     }
 
