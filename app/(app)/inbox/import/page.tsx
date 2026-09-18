@@ -1,4 +1,5 @@
 "use client";
+"use client";
 
 import { ChangeEvent, useState } from "react";
 import Link from "next/link";
@@ -6,6 +7,7 @@ import Papa from "papaparse";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { ChannelImportPanel } from "@/components/feedback/channel-import-panel";
 
 type ParsedRow = {
   rowNumber: number;
@@ -195,6 +197,9 @@ export default function ImportPage() {
           </div>
         )}
       </section>
+       <div className="mt-6">
+        <ChannelImportPanel />
+      </div>
     </div>
   );
 }
