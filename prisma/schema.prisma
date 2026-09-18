@@ -25,44 +25,44 @@ enum Sentiment {
 }
 
 model Workspace {
-  id        String     @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  createdAt DateTime   @default(now())
+  createdAt DateTime @default(now())
 
-  users     User[]
-  feedback  Feedback[]
-  themes    Theme[]
-  reports   Report[]
+  users    User[]
+  feedback Feedback[]
+  themes   Theme[]
+  reports  Report[]
 }
 
 model User {
-  id           String    @id @default(cuid())
+  id           String @id @default(cuid())
   name         String
-  email        String    @unique
+  email        String @unique
   passwordHash String
-  role         Role      @default(VIEWER)
+  role         Role   @default(VIEWER)
   workspaceId  String
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  reports      Report[]
+  reports Report[]
 
   @@index([workspaceId])
 }
 
 model Feedback {
-  id             String          @id @default(cuid())
+  id             String         @id @default(cuid())
   content        String
   channel        String
   sourceRef      String?
   customerLabel  String?
   sentiment      Sentiment?
   sentimentScore Float?
-  status         FeedbackStatus  @default(NEW)
-  createdAt      DateTime        @default(now())
+  status         FeedbackStatus @default(NEW)
+  createdAt      DateTime       @default(now())
   workspaceId    String
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   feedbackThemes FeedbackTheme[]
   embedding      Embedding?
@@ -75,13 +75,13 @@ model Feedback {
 }
 
 model Theme {
-  id             String          @id @default(cuid())
-  name           String
-  description    String?
-  color          String?
-  workspaceId    String
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  workspaceId String
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   feedbackThemes FeedbackTheme[]
 
@@ -94,19 +94,19 @@ model FeedbackTheme {
   themeId    String
   confidence Float?
 
-  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  theme      Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  theme    Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
 
   @@id([feedbackId, themeId])
   @@index([themeId])
 }
 
 model Embedding {
-  id         String   @id @default(cuid())
-  feedbackId String   @unique
+  id         String                @id @default(cuid())
+  feedbackId String                @unique
   vector     Unsupported("vector")
 
-  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
 }
 
 model Report {
@@ -119,8 +119,8 @@ model Report {
   workspaceId String
   generatedBy String
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  generator   User      @relation(fields: [generatedBy], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  generator User      @relation(fields: [generatedBy], references: [id])
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
