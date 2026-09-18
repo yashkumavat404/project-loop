@@ -1,13 +1,14 @@
 "use client";
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Papa from "papaparse";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { ChannelImportPanel } from "@/components/feedback/channel-import-panel";
+import { CSVUploader } from "@/components/feedback/csv-uploader";
 
 type ParsedRow = {
   rowNumber: number;
@@ -28,16 +29,7 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; failed: number } | null>(null);
 
-  function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    const selected = event.target.files?.[0] || null;
-    setFile(selected);
-    setRows([]);
-    setResult(null);
-    setMessage("");
-    if (selected) {
-      parseFile(selected);
-    }
-  }
+ 
 
   function parseFile(selected: File) {
     Papa.parse(selected, {
@@ -133,11 +125,18 @@ export default function ImportPage() {
           </div>
         </div>
 
-        <label className="mt-6 block cursor-pointer rounded-xl border-2 border-dashed border-line p-10 text-center hover:bg-slate-50">
-          <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
-          <p className="font-semibold">{file ? file.name : "Choose CSV file"}</p>
-          <p className="mt-1 text-xs text-muted">CSV only</p>
-        </label>
+        <div className="mt-6">
+  <CSVUploader
+    fileName={file?.name || null}
+    onFileSelected={(selected) => {
+      setFile(selected);
+      setRows([]);
+      setResult(null);
+      setMessage("");
+      parseFile(selected);
+    }}
+  />
+</div>
 
         {message && <p className="mt-4 text-sm text-rose-600">{message}</p>}
 
