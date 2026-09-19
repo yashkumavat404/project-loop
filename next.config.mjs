@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
-  reactStrictMode: true
+  reactStrictMode: true,
+
+  experimental: {
+    serverComponentsExternalPackages: [
+      "@huggingface/transformers",
+      "onnxruntime-node",
+    ],
+  },
 };
+
 export default nextConfig;

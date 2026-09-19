@@ -2,7 +2,13 @@ export type Role = "ADMIN" | "ANALYST" | "VIEWER";
 
 export type FeedbackStatus = "NEW" | "REVIEWED" | "ACTIONED";
 
-export type FeedbackChannel = "WEB" | "CSV" | "EMAIL" | "SUPPORT" | "APP_STORE" | "SURVEY";
+export type FeedbackChannel =
+  | "WEB"
+  | "CSV"
+  | "EMAIL"
+  | "SUPPORT"
+  | "APP_STORE"
+  | "SURVEY";
 
 export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
 
@@ -91,6 +97,8 @@ export interface Report {
   periodEnd: string;
   summary: string;
   topThemes: Array<{ name: string; count: number }>;
+  insights: string[];
+  recommendations: string[];
   createdAt: string;
 }
 

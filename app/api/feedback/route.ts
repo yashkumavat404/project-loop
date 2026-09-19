@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { classifyFeedback } from "@/lib/feedback-ai";
+import { storeFeedbackEmbedding } from "@/lib/embedding-store";
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +22,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const pageParam = Number(searchParams.get("page") || "1");
-    const pageSizeParam = Number(searchParams.get("pageSize") || "20");
+    const pageSizeParam = Number(
+      searchParams.get("pageSize") || "20"
+    );
 
     const page =
       Number.isFinite(pageParam) && pageParam > 0
@@ -36,7 +40,8 @@ export async function GET(request: NextRequest) {
 
     const search = searchParams.get("search")?.trim() || "";
     const status = searchParams.get("status")?.trim() || "";
-    const sentiment = searchParams.get("sentiment")?.trim() || "";
+    const sentiment =
+      searchParams.get("sentiment")?.trim() || "";
     const channel = searchParams.get("channel")?.trim() || "";
 
     const where = {
@@ -63,7 +68,10 @@ export async function GET(request: NextRequest) {
 
       ...(status
         ? {
-            status: status as "NEW" | "REVIEWED" | "ACTIONED",
+            status: status as
+              | "NEW"
+              | "REVIEWED"
+              | "ACTIONED",
           }
         : {}),
 
@@ -90,7 +98,10 @@ export async function GET(request: NextRequest) {
       where,
     });
 
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const totalPages = Math.max(
+      1,
+      Math.ceil(total / pageSize)
+    );
 
     const safePage = Math.min(page, totalPages);
 
@@ -161,7 +172,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Only ADMIN and ANALYST users can create feedback.
-    // VIEWER users are read-only.
     if (
       session.user.role !== "ADMIN" &&
       session.user.role !== "ANALYST"
@@ -174,26 +184,38 @@ export async function POST(request: NextRequest) {
 
     const workspaceId = session.user.workspaceId;
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+
+    if (
+      typeof body !== "object" ||
+      body === null
+    ) {
+      return NextResponse.json(
+        { error: "Invalid request body." },
+        { status: 400 }
+      );
+    }
+
+    const requestBody = body as Record<string, unknown>;
 
     const text =
-      typeof body.text === "string"
-        ? body.text.trim()
+      typeof requestBody.text === "string"
+        ? requestBody.text.trim()
         : "";
 
     const customerName =
-      typeof body.customerName === "string"
-        ? body.customerName.trim()
+      typeof requestBody.customerName === "string"
+        ? requestBody.customerName.trim()
         : "";
 
     const customerEmail =
-      typeof body.customerEmail === "string"
-        ? body.customerEmail.trim()
+      typeof requestBody.customerEmail === "string"
+        ? requestBody.customerEmail.trim()
         : "";
 
     const channel =
-      typeof body.channel === "string"
-        ? body.channel.trim().toUpperCase()
+      typeof requestBody.channel === "string"
+        ? requestBody.channel.trim().toUpperCase()
         : "";
 
     if (!text) {
@@ -210,23 +232,133 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const feedback = await prisma.feedback.create({
-      data: {
-        content: text,
-        customerLabel: customerName || null,
-        channel,
+    /*
+     * Get only themes belonging to the authenticated workspace.
+     */
+    const workspaceThemes = await prisma.theme.findMany({
+      where: {
         workspaceId,
-        status: "NEW",
       },
-
-      include: {
-        feedbackThemes: {
-          include: {
-            theme: true,
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        name: "asc",
       },
     });
+
+    const themeNames = workspaceThemes.map(
+      (theme) => theme.name
+    );
+
+    /*
+     * Classify feedback using Groq.
+     */
+    const classification = await classifyFeedback(
+      text,
+      themeNames
+    );
+
+    /*
+     * Map AI theme names to actual workspace Theme IDs.
+     */
+    const themeMap = new Map(
+      workspaceThemes.map((theme) => [
+        theme.name,
+        theme.id,
+      ])
+    );
+
+    const themeRelations = classification.themes
+      .map((theme) => {
+        const themeId = themeMap.get(theme.name);
+
+        if (!themeId) {
+          return null;
+        }
+
+        return {
+          themeId,
+          confidence: theme.confidence,
+        };
+      })
+      .filter(
+        (
+          relation
+        ): relation is {
+          themeId: string;
+          confidence: number;
+        } => relation !== null
+      );
+
+    /*
+     * Create the feedback and theme relationships atomically.
+     */
+    const feedback = await prisma.$transaction(
+      async (transaction) => {
+        return transaction.feedback.create({
+          data: {
+            content: text,
+            customerLabel: customerName || null,
+            channel,
+            workspaceId,
+            status: "NEW",
+            sentiment: classification.sentiment,
+            sentimentScore:
+              classification.sentimentScore,
+
+            feedbackThemes:
+              themeRelations.length > 0
+                ? {
+                    create: themeRelations.map(
+                      (relation) => ({
+                        theme: {
+                          connect: {
+                            id: relation.themeId,
+                          },
+                        },
+                        confidence:
+                          relation.confidence,
+                      })
+                    ),
+                  }
+                : undefined,
+          },
+
+          include: {
+            feedbackThemes: {
+              include: {
+                theme: true,
+              },
+            },
+          },
+        });
+      }
+    );
+
+    /*
+     * Generate and store the semantic embedding.
+     *
+     * If embedding generation fails, the feedback itself
+     * remains safely stored. It can be embedded later by
+     * the backfill script.
+     */
+    let embeddingStatus: "READY" | "PENDING" = "READY";
+
+    try {
+      await storeFeedbackEmbedding(
+        feedback.id,
+        workspaceId
+      );
+    } catch (embeddingError) {
+      embeddingStatus = "PENDING";
+
+      console.error(
+        "Failed to generate feedback embedding:",
+        embeddingError
+      );
+    }
 
     const response = {
       id: feedback.id,
@@ -240,14 +372,19 @@ export async function POST(request: NextRequest) {
       sentimentScore: feedback.sentimentScore,
       score: feedback.sentimentScore,
       featureArea: null,
-      themes: feedback.feedbackThemes.map((relation) => ({
-        id: relation.theme.id,
-        name: relation.theme.name,
-      })),
+      themes: feedback.feedbackThemes.map(
+        (relation) => ({
+          id: relation.theme.id,
+          name: relation.theme.name,
+        })
+      ),
+      embeddingStatus,
       createdAt: feedback.createdAt.toISOString(),
     };
 
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(response, {
+      status: 201,
+    });
   } catch (error) {
     console.error("POST /api/feedback error:", error);
 

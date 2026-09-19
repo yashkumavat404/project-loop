@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { generateReportAI } from "@/lib/report-ai";
 
 const createReportSchema = z
   .object({
@@ -26,10 +27,13 @@ function mapReport(report: {
   const content =
     typeof report.contentJson === "object" &&
     report.contentJson !== null
-      ? report.contentJson as {
+      ? (report.contentJson as {
           summary?: unknown;
           topThemes?: unknown;
-        }
+          insights?: unknown;
+          recommendations?: unknown;
+          statistics?: unknown;
+        })
       : {};
 
   const summary =
@@ -49,6 +53,18 @@ function mapReport(report: {
       )
     : [];
 
+  const insights = Array.isArray(content.insights)
+    ? content.insights.filter(
+        (item): item is string => typeof item === "string"
+      )
+    : [];
+
+  const recommendations = Array.isArray(content.recommendations)
+    ? content.recommendations.filter(
+        (item): item is string => typeof item === "string"
+      )
+    : [];
+
   return {
     id: report.id,
     title: report.title,
@@ -56,6 +72,8 @@ function mapReport(report: {
     periodEnd: report.periodEnd.toISOString(),
     summary,
     topThemes,
+    insights,
+    recommendations,
     createdAt: report.createdAt.toISOString(),
   };
 }
@@ -214,15 +232,23 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    const summary =
-      totalFeedback === 0
-        ? "No customer feedback was recorded during this reporting period."
-        : `The reporting period contains ${totalFeedback} customer feedback records, including ${positiveCount} positive, ${neutralCount} neutral, and ${negativeCount} negative records. ${actionedCount} feedback records were actioned.`;
+    const reportAI = await generateReportAI({
+      periodStart: periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      totalFeedback,
+      positiveCount,
+      neutralCount,
+      negativeCount,
+      actionedCount,
+      topThemes,
+    });
 
     const title = "Voice of Customer Report";
 
     const contentJson = {
-      summary,
+      summary: reportAI.summary,
+      insights: reportAI.insights,
+      recommendations: reportAI.recommendations,
       topThemes,
       statistics: {
         totalFeedback,
@@ -232,6 +258,8 @@ export async function POST(request: NextRequest) {
         actionedCount,
       },
       generatedBy,
+      aiProvider: "groq",
+      aiModel: "openai/gpt-oss-20b",
     };
 
     const report = await prisma.report.create({
@@ -252,8 +280,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("POST /api/reports error:", error);
 
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to create report.";
+
     return NextResponse.json(
-      { message: "Failed to create report." },
+      { message },
       { status: 500 }
     );
   }

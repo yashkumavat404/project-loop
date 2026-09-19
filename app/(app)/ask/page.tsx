@@ -9,8 +9,23 @@ import type { AskResponse } from "@/lib/types";
 const suggestions = [
   "What are customers saying about onboarding?",
   "Which themes are becoming more negative?",
-  "What should the product team prioritize?"
+  "What should the product team prioritize?",
 ];
+
+function formatSourceDate(dateString: string): string {
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown date";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
 
 export default function AskPage() {
   const [question, setQuestion] = useState("");
@@ -34,7 +49,8 @@ export default function AskPage() {
     } catch (error: unknown) {
       console.error("Ask LOOP error:", error);
 
-      let message = "An unknown error occurred while processing the request.";
+      let message =
+        "An unknown error occurred while processing the request.";
 
       if (error instanceof Error) {
         message = error.message;
@@ -53,13 +69,13 @@ export default function AskPage() {
             message = errorObject.error;
           }
         } catch {
-          // Keep the default error message
+          // Keep the default error message.
         }
       }
 
       setAnswer({
         answer: `Ask LOOP failed: ${message}`,
-        sources: []
+        sources: [],
       });
     } finally {
       setLoading(false);
@@ -147,7 +163,7 @@ export default function AskPage() {
 
                     <p className="mt-2 text-xs text-muted">
                       {source.channel} ·{" "}
-                      {new Date(source.createdAt).toLocaleDateString()}
+                      {formatSourceDate(source.createdAt)}
                     </p>
                   </div>
                 ))}

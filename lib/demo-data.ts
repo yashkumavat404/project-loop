@@ -30,11 +30,41 @@ export const demoSentiment: SentimentPoint[] = days.map((label, i) => ({
 }));
 
 export const demoThemes: Theme[] = [
-  { id: "1", name: "Onboarding", count: 31, changePercent: 18, sentiment: "NEGATIVE" },
-  { id: "2", name: "Checkout", count: 24, changePercent: 9, sentiment: "NEGATIVE" },
-  { id: "3", name: "Performance", count: 22, changePercent: 26, sentiment: "NEGATIVE" },
-  { id: "4", name: "Notifications", count: 17, changePercent: -5, sentiment: "POSITIVE" },
-  { id: "5", name: "Mobile App", count: 15, changePercent: 12, sentiment: "NEUTRAL" }
+  {
+    id: "1",
+    name: "Onboarding",
+    count: 31,
+    changePercent: 18,
+    sentiment: "NEGATIVE"
+  },
+  {
+    id: "2",
+    name: "Checkout",
+    count: 24,
+    changePercent: 9,
+    sentiment: "NEGATIVE"
+  },
+  {
+    id: "3",
+    name: "Performance",
+    count: 22,
+    changePercent: 26,
+    sentiment: "NEGATIVE"
+  },
+  {
+    id: "4",
+    name: "Notifications",
+    count: 17,
+    changePercent: -5,
+    sentiment: "POSITIVE"
+  },
+  {
+    id: "5",
+    name: "Mobile App",
+    count: 15,
+    changePercent: 12,
+    sentiment: "NEUTRAL"
+  }
 ];
 
 export const demoFeedback: Feedback[] = [
@@ -98,11 +128,22 @@ export const demoReports: Report[] = [
     title: "Weekly Voice of Customer — Aug 31 to Sep 6",
     periodStart: "2026-08-31",
     periodEnd: "2026-09-06",
-    summary: "Customers are positive about notifications but continue to report friction in onboarding, checkout and mobile performance.",
+    summary:
+      "Customers are positive about notifications but continue to report friction in onboarding, checkout and mobile performance.",
     topThemes: [
       { name: "Onboarding", count: 31 },
       { name: "Checkout", count: 24 },
       { name: "Performance", count: 22 }
+    ],
+    insights: [
+      "Onboarding is the most frequently reported theme in the selected period.",
+      "Checkout and performance are also recurring areas of customer feedback.",
+      "Notifications received comparatively positive feedback."
+    ],
+    recommendations: [
+      "Review the onboarding flow for points where customers may become confused.",
+      "Investigate recurring checkout and performance feedback.",
+      "Continue monitoring customer response to notification controls."
     ],
     createdAt: new Date().toISOString()
   }
