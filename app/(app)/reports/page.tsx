@@ -4,18 +4,42 @@ import { FormEvent, useEffect, useState } from "react";
 import { Download, FileText } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { api } from "@/lib/api";
-import { demoReports } from "@/lib/demo-data";
 import type { Report } from "@/lib/types";
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>(demoReports);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [start, setStart] = useState("2026-08-31");
   const [end, setEnd] = useState("2026-09-06");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    api.getReports().then(setReports).catch(() => {});
+    let mounted = true;
+
+    async function loadReports() {
+      try {
+        const data = await api.getReports();
+
+        if (mounted) {
+          setReports(data);
+        }
+      } catch {
+        if (mounted) {
+          setReports([]);
+        }
+      } finally {
+        if (mounted) {
+          setInitialLoading(false);
+        }
+      }
+    }
+
+    loadReports();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function generate(e: FormEvent) {
@@ -141,7 +165,22 @@ export default function ReportsPage() {
       </section>
 
       <section className="mt-6 space-y-4">
-        {reports.length === 0 ? (
+        {initialLoading ? (
+          <div className="card p-8 text-center">
+            <FileText
+              size={32}
+              className="mx-auto mb-3 animate-pulse text-muted"
+            />
+
+            <h2 className="font-semibold">
+              Loading reports...
+            </h2>
+
+            <p className="mt-1 text-sm text-muted">
+              Checking reports for your workspace.
+            </p>
+          </div>
+        ) : reports.length === 0 ? (
           <div className="card p-8 text-center">
             <FileText
               size={32}

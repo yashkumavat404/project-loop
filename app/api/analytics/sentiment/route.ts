@@ -1,15 +1,31 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    // Get the latest 7 days of feedback
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.workspaceId) {
+      return NextResponse.json(
+        {
+          message: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
+    const workspaceId = session.user.workspaceId;
+
+    // Get the latest 7 days of feedback for the authenticated workspace
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 6);
     startDate.setHours(0, 0, 0, 0);
 
     const feedback = await prisma.feedback.findMany({
       where: {
+        workspaceId,
         createdAt: {
           gte: startDate,
         },
