@@ -5,66 +5,44 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 const signupSchema = z.object({
-  name: z
+  name: z.string().trim().min(2, "Name must be at least 2 characters."),
+  workspace: z
     .string()
     .trim()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name is too long"),
-
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .email("Invalid email address"),
-
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(100, "Password is too long"),
-
-  workspaceName: z
-    .string()
-    .trim()
-    .min(2, "Workspace name must be at least 2 characters")
-    .max(100, "Workspace name is too long"),
+    .min(2, "Workspace name must be at least 2 characters."),
+  email: z.string().trim().toLowerCase().email("Invalid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
 
-    const result = signupSchema.safeParse(body);
+    const validation = signupSchema.safeParse(body);
 
-    if (!result.success) {
+    if (!validation.success) {
       return NextResponse.json(
         {
-          message: "Invalid signup data",
-          errors: result.error.flatten().fieldErrors,
+          message:
+            validation.error.issues[0]?.message ||
+            "Invalid signup details.",
         },
         { status: 400 }
       );
     }
 
-    const {
-      name,
-      email,
-      password,
-      workspaceName,
-    } = result.data;
+    const { name, workspace, email, password } = validation.data;
 
     const existingUser = await prisma.user.findUnique({
       where: {
         email,
-      },
-      select: {
-        id: true,
       },
     });
 
     if (existingUser) {
       return NextResponse.json(
         {
-          message: "An account with this email already exists",
+          message: "An account with this email already exists.",
         },
         { status: 409 }
       );
@@ -72,53 +50,52 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const resultData = await prisma.$transaction(async (tx) => {
-      const workspace = await tx.workspace.create({
+    const result = await prisma.$transaction(async (tx) => {
+      const createdWorkspace = await tx.workspace.create({
         data: {
-          name: workspaceName,
+          name: workspace,
         },
       });
 
-      const user = await tx.user.create({
+      const createdUser = await tx.user.create({
         data: {
           name,
           email,
           passwordHash,
           role: "ADMIN",
-          workspaceId: workspace.id,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          workspaceId: true,
+          workspaceId: createdWorkspace.id,
         },
       });
 
       return {
-        workspace,
-        user,
+        workspace: createdWorkspace,
+        user: createdUser,
       };
     });
 
     return NextResponse.json(
       {
-        message: "Account created successfully",
-        user: resultData.user,
+        message: "Workspace created successfully.",
+        user: {
+          id: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+          role: result.user.role,
+          workspaceId: result.user.workspaceId,
+        },
         workspace: {
-          id: resultData.workspace.id,
-          name: resultData.workspace.name,
+          id: result.workspace.id,
+          name: result.workspace.name,
         },
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Signup error:", error);
+    console.error("POST /api/auth/signup error:", error);
 
     return NextResponse.json(
       {
-        message: "Unable to create account",
+        message: "Unable to create workspace. Please try again.",
       },
       { status: 500 }
     );
