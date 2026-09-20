@@ -49,12 +49,30 @@ export default function ReportsPage() {
 
     try {
       const report = await api.createReport(start, end);
+
       setReports((current) => [report, ...current]);
       setMessage("Report generated successfully.");
-    } catch {
-      setMessage(
-        "Failed to generate the report. Please check the selected dates and try again."
-      );
+    } catch (error) {
+      const apiError = error as {
+        status?: number;
+        message?: string;
+      };
+
+      const errorMessage = apiError?.message?.toLowerCase() ?? "";
+
+      if (
+        apiError?.status === 403 ||
+        errorMessage.includes("403") ||
+        errorMessage.includes("forbidden")
+      ) {
+        setMessage(
+          "You don't have permission to generate reports. Viewers can only view existing reports."
+        );
+      } else {
+        setMessage(
+          "Failed to generate the report. Please check the selected dates and try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
