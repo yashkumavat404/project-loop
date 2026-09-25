@@ -8,6 +8,8 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [channel, setChannel] = useState("WEB");
+  const [customerLabel, setCustomerLabel] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -18,6 +20,10 @@ export function FeedbackForm({ onCreated }: { onCreated?: () => void }) {
       setMessage("Feedback text is required.");
       return;
     }
+    if (!channel) {
+  setMessage("Channel is required.");
+  return;
+   }
 
     try {
       setSaving(true);
